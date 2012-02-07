@@ -239,6 +239,16 @@
 		// snap back to original position
 		this._cardImg.attr({x: this._origin_x});
 		this._cardImg.attr({y: this._origin_y});
+
+		// move any cards on top of this one
+		stacks.moveStack({'data':{	
+			'suit': this.suit,
+			'value' : this.value,
+			'height': this._height, 
+			'width' : this._width,
+			'x' : this._x,
+			'y' : this._y
+		}});
 	};
 	
 	/**
@@ -264,6 +274,19 @@
 		// snap back to original position
 		this._cardImg.attr({x: this._origin_x});
 		this._cardImg.attr({y: this._origin_y});
+		
+		console.log ("SNAP : " + this._origin_x);
+		console.log(this);
+		
+		// move any cards on top of this one
+		stacks.moveStack({'data':{	
+			'suit': this.suit,
+			'value' : this.value,
+			'height': this._height, 
+			'width' : this._width,
+			'x' : this.origin_x,
+			'y' : this.origin_y
+		}});
 	};
 	
 	/**
@@ -683,8 +706,10 @@
 				this.setOverTurnListener();
 				// enable the dragging on top cards
 				this.setDrag();
-				// listen for dragging
+				// start listening for drag events
 				this.setCardStartListener();
+				this.setCardMoveListener();
+				this.setCardFinishListener();
 			},
 			//add card to stack
 			add : function (stack_pointer, card){
@@ -722,7 +747,6 @@
 					var subArray = new Array();
 					// go through each card in the current stack
 					for (var j=0;j<this._stacks[i]._stack.getSize();j++){
-						console.log (this._stacks[i]._stack.getIndex(j)._face);
 						// add faceup cards to the face up array
 						if (this._stacks[i]._stack.getIndex(j)._face=="up") subArray.push(this._stacks[i]._stack.getIndex(j)); 
 					}
@@ -768,9 +792,8 @@
 							}
 						}
 					}
-					self.setCardMoveListener();
-					self.setCardFinishListener();
 				},false);
+				
 			},
 			// deal with when card is moving
 			setCardMoveListener : function () {
@@ -842,6 +865,7 @@
 						// snap back to original position
 						evt.data.card.snapToStartPos();
 					}
+					
 					//enable the dragging for all cards again
 					self.setDrag();
 					
@@ -853,23 +877,39 @@
 			 * @param evt original drag event details
 			 */
 			moveStack : function (evt) {
+				var list=this.getCardsOnTop(evt.data);
+				for (var i=0;i<list.length;i++){
+					// work out the new Y pos - how many cards above the original card are we * 10px 
+					var newY = evt.data.y + ((i+1) * 15 ); 
+					list[i]._cardImg.toFront(); // move card to the front
+					list[i].moveToPos(evt.data.x, newY);
+				}
+			},
+			
+			/**
+			 * Get list of cards stacked on top of another card
+			 * @param card 
+			 * @return array 
+			 */
+			getCardsOnTop : function (card) {
 				//check if there are any cards stacked on top
 				var origStack = this._stacks[this._originalStack]._stack;
+				// prepare a return array
+				var list = [];
 				//loop through the stack that this card came from
 				for (var i=0;i<origStack.getSize();i++){
 					// check if this is the same card as we are dragging
-					if (origStack.getIndex(i).suit==evt.data.suit && origStack.getIndex(i).value==evt.data.value) {
+					if (origStack.getIndex(i).suit==card.suit && origStack.getIndex(i).value==card.value) {
 						//loop up to the end of the stack
 						for (var j=i + 1; j<origStack.getSize();j++){
-							// work out the new Y pos - how many cards above the original card are we * 10px 
-							var newY = evt.data.y + ((j - i ) * 10 ); 
-							origStack.getIndex(j).moveToPos(evt.data.x, newY);
+							// add card to the array
+							list.push(origStack.getIndex(j));
 						}
 						// can exit the main loop now
 						break;
 					} 
 				}
-				
+				return list;
 			},
 			
 			/**
@@ -880,10 +920,13 @@
 			 * 
 			 **/
 			moveCardToStack : function (card, stack_pointer) {
+				// get list of cards on top of this one 
+				var list = this.getCardsOnTop(card);
 				//remove card from old stack
 				this.remove(this._originalStack,card);
 				//add card to new stack
 				this.add(stack_pointer, card);
+				
 				//check if there is a card in the stack
 				if (this._topCards[stack_pointer]){
 					//snap card to current card on this stack
@@ -892,6 +935,21 @@
 					//snap card to base of this stack
 					card.snapToPos (this._stackPositions[stack_pointer]);
 				}
+				
+				// move any cards on top of this one
+				for (var i=0;i<list.length;i++){
+					// work out the new Y pos - how many cards above the original card are we * 10px 
+					var newY = card._cardImg.attr('y') + ((i+1) * 15 );
+					list[i]._cardImg.toFront(); // move card to the front
+					list[i].moveToPos(card._cardImg.attr('x'), newY);
+					console.log ("MOVE STACK: " + list[i].value + " move to " + card._cardImg.attr('x'));
+					//remove card from old stack list
+					this.remove(this._originalStack,list[i]);
+					//add card to new stack list
+					this.add(stack_pointer, list[i]);
+				}
+				
+				
 				// reset the top cards list
 				this.makeTopList();
 				// and face up list
