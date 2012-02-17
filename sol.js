@@ -788,7 +788,6 @@
 			},
 			makeTopList : function () {
 				// loop through each stack
-				//for (var i=0;i<this._maxStacks;i++){
 				// +1 for the dealpile
 				for (var i=0;i<this._maxStacks + 1;i++){
 					// get top card on the stack ( last in the array )
@@ -1034,6 +1033,8 @@
 				card.turnOver();	
 				// and face up list
 				this.makeFaceUpList();
+				//set up the drag
+				this.setDrag();
 			},
 			
 			/**
