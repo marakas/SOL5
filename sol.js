@@ -444,6 +444,25 @@
 	};
 	
 	/**
+	 * Pile init 
+	 * just create a linked list object
+	 */
+	Pile.prototype.init = function (){
+		this._pile=new LinkedListObject();
+	};
+	
+	/**
+	 * Pile add
+	 * Just add a card to the pile
+	 * returns true or false
+	 * @param card card object 
+	 */
+	Pile.prototype.add = function (card){
+		this._pile.add(card);
+		return true;
+	};
+	
+	/**
 	 * OrderedPile
 	 * List of cards that is limited by sort_order
 	 * extends Pile
@@ -584,7 +603,7 @@
 	};
 	
 	/**
-	 * Create an unordered pile for the facedown cards 
+	 * Create an unordered pile for the face-down cards 
 	 */
 	function Stack(){
 		//create a new local LinkedList for this instance
@@ -619,6 +638,8 @@
 	
 	
 	// create the stacks on the table of dealt cards
+	// last stack will hold the remainder of the cards and will be used for the deal pile
+	
 	var stacks = {
 			_maxStacks : 7, // will only have 7
 			_stacks : null,
@@ -631,6 +652,9 @@
 			_topCards : null, // array to hold the top cards of each stack
 			_faceUpCards : null, // array to hold all face-up cards ( these can all be dragged )
 			_originalStack : null, // remember which stack the moving card came from
+			_dealPileTop : 20, // ypos for dealpile
+			_dealPileLeft : 400, // xpos for dealPile
+			_dealPileIndex:7, // stack array index for our deal pile 
 			
 			init : function (){
 				var self = this;
@@ -653,6 +677,15 @@
 					stack.draw(paper);
 					this._stacks.push(stack);
 				}
+				// add the dealPile
+				var dealPile = new Stack();
+				// set the position of the dealPile
+				dealPile.position(this._dealPileLeft,this._dealPileTop);
+				// draw its outline to the screen
+				dealPile.draw(paper);
+				// add it to our stack pile
+				this._stacks.push(dealPile);
+				
 				// listen for any aces that are double clicked
 				document.addEventListener("sendToPile",function(evt){
 					for (var i=0;i<self._stacks.length;i++) {
@@ -694,6 +727,22 @@
 					}
 					if (maxDealRounds<0) break;
 				}
+				
+				// deal the remaining cards to the deal pile
+				// loop through all remaining cards in the deck
+				while (deck.getSize()>0){
+					//deal a card from the deck 
+					var card = deck.dealCard();
+					//calculate its position
+					var x = this._dealPileLeft; //same as dealpile
+					var y = this._dealPileTop; //same as dealpile 
+					card.position (x,y);
+					//always deal face down
+					card.draw(paper,"down");
+					//and add it to the dealPile stack
+					this.add(this._dealPileIndex,card);
+				}
+				
 				//make list of all top cards on each stack
 				this.makeTopList();
 				// turn over the top card on each stack
@@ -726,11 +775,13 @@
 					return this._stacks[stack_pointer].getLast();
 			},
 			getSize : function () {
-				return this._stacks.length;
+				return this._stacks.length - 1 ; // -1 to ignore the dealpile
 			},
 			makeTopList : function () {
 				// loop through each stack
-				for (var i=0;i<this._maxStacks;i++){
+				//for (var i=0;i<this._maxStacks;i++){
+				// +1 for the dealpile
+				for (var i=0;i<this._maxStacks + 1;i++){
 					// get top card on the stack ( last in the array )
 					var card = this.getLast(i);
 					// add to top card list
@@ -741,8 +792,8 @@
 			makeFaceUpList : function () {
 				//clear the faceUp array
 				this._faceUpCards = new Array();
-				// loop through each stack
-				for (var i=0;i<this._maxStacks;i++){
+				// loop through each stack +1 for the dealpile
+				for (var i=0;i<this._maxStacks+1;i++){
 					// make sub array for this stack
 					var subArray = new Array();
 					// go through each card in the current stack
@@ -892,6 +943,8 @@
 			 * @return array 
 			 */
 			getCardsOnTop : function (card) {
+				// we dont do this for dealPile
+				if (this._originalStack==this._dealPileIndex) return false; 
 				//check if there are any cards stacked on top
 				var origStack = this._stacks[this._originalStack]._stack;
 				// prepare a return array
@@ -926,7 +979,7 @@
 				this.remove(this._originalStack,card);
 				//add card to new stack
 				this.add(stack_pointer, card);
-				
+				console.log("add to :" + stack_pointer);
 				//check if there is a card in the stack
 				if (this._topCards[stack_pointer]){
 					//snap card to current card on this stack
@@ -978,6 +1031,9 @@
 				console.log(this._stacks);
 			}
 	};
+	
+	
+	
 	
 	
 	
@@ -1049,6 +1105,65 @@
 				console.log(this._piles);
 			}
 	};
+	
+	
+	
+	// create the dealPile on the table of remaining cards
+	var dealPile = {
+			_pileLeft : 420, // X pos of the deal pile
+			_pileTop : 20, // topY pos of the deal pile
+			_cardWidth : 50, // width of a card
+			_pile :null, // hold our pile 
+			_topCard : null, // remember what card is on top of the pile
+			
+			init : function (deck){
+				// add a list to each pile to hold the cards
+				this._pile = new Pile();
+				this._pile.init();
+				this._pile.position(this._pileLeft,this._pileTop);
+				this._pile.draw(paper);
+			},
+			
+			deal : function (deck) {
+				// loop through all remaining cards in the deck
+				while (deck.getSize()>0){
+					//deal a card from the deck 
+					var card = deck.dealCard();
+					//calculate its position
+					var x = this._pileLeft; //same as dealpile
+					var y = this._pileTop; //same as dealpile 
+					card.position (x,y);
+					//always deal face down
+					card.draw(paper,"down");
+					//and add it to the pile
+					this._pile.add(card);
+					// remember this card - its on top now
+					this._topCard = card;
+				}
+
+				//turn up the top card
+				this._topCard.turnOver();
+							
+				// enable the dragging on top cards
+				this.setDrag();
+				/*
+				// start listening for drag events
+				this.setCardStartListener();
+				this.setCardMoveListener();
+				this.setCardFinishListener();
+				*/
+			},
+			// make the top card ready for dragging
+			setDrag : function (){
+				this._topCard.setDrag("on");
+			},
+			toConsole : function (){
+				console.log(this._stacks);
+			}
+	};
+	
+	
+	
 	/**
 	 * triggerEvent
 	 * creates and dispatches an event
@@ -1108,12 +1223,12 @@
 	 * test array for "loading" the deck
 	 */
 	var cards = [
-	             {suit:'d',value:'k'},{suit:'c',value:'2'},{suit:'h',value:'3'},{suit:'c',value:'4'},{suit:'c',value:'5'},{suit:'c',value:'6'},{suit:'c',value:'7'},
+	             {suit:'d',value:'2'},{suit:'c',value:'2'},{suit:'h',value:'3'},{suit:'c',value:'4'},{suit:'c',value:'5'},{suit:'c',value:'6'},{suit:'c',value:'7'},
 	             {suit:'c',value:'8'},{suit:'c',value:'9'},{suit:'c',value:'10'},{suit:'c',value:'j'},{suit:'c',value:'q'},{suit:'c',value:'k'},
 	             {suit:'d',value:'q'},{suit:'d',value:'2'},{suit:'d',value:'3'},{suit:'d',value:'4'},{suit:'d',value:'5'},{suit:'d',value:'6'},{suit:'d',value:'7'},
 	             {suit:'d',value:'8'},{suit:'d',value:'9'},{suit:'d',value:'10'},{suit:'d',value:'j'}
 	             
-	             						,{suit:'d',value:'2'}
+	             						,{suit:'d',value:'k'}
 	             						,{suit:'c',value:'1'}
 	             					,{suit:'c',value:'3'}
 	             						,{suit:'s',value:'3'}
@@ -1151,7 +1266,12 @@
 	stacks.deal(deck);
 	//set up piles for the player
 	piles.init(deck);
-	
+	/*
+	//set up the deal Pile 
+	dealPile.init();
+	//deal remaining cards to dealpile
+	dealPile.deal(deck);
+	*/
 
 	
 })();

@@ -11,9 +11,9 @@ function LinkedListObject(){
 	this.size = 0;
 
 	this.add = function(data) {
-		console.log("add");
-		console.log("data");
-		console.log(data);
+		//console.log("add");
+		//console.log("data");
+		//console.log(data);
 		var newNode = new LinkedListNode();
 		newNode.data = data;
 		
@@ -22,18 +22,18 @@ function LinkedListObject(){
 			this.lastNode = newNode;
 		}
 		else {
-			console.log("lastNode next: ");
-			console.log(this.lastNode);
+			//console.log("lastNode next: ");
+			//console.log(this.lastNode);
 			this.lastNode.next = newNode;
 			this.lastNode = newNode;
 		}
-		console.log("lastNode: ");
-		console.log(this.lastNode);
+		//console.log("lastNode: ");
+		//console.log(this.lastNode);
 		this.size++;
 	};
 
 	this.remove = function(data) {
-		console.log("remove");
+		//console.log("remove");
 		var currentNode = this.firstNode;
 
 		if (this.size == 0) {
@@ -98,7 +98,7 @@ function LinkedListObject(){
 	 * 
 	 */
 	this.popFromIndex = function(index) {
-		console.log("Popfromn index");
+		//console.log("Popfromn index");
 		if (isNaN(index) || this.size==0) return false;
 		var currentNode = this.firstNode;
 		//are we removing first node?
